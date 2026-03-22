@@ -1,91 +1,18 @@
-<script>
-  let dashboard, worksheet;
+<!DOCTYPE html>
+<html>
+<head>
+  <title>GenAI Dashboard Control</title>
 
-  async function init() {
-    try {
-      // 🔥 Directly initialize Tableau
-      await tableau.extensions.initializeAsync();
+  <!-- ✅ REQUIRED -->
+  <script src="https://public.tableau.com/javascripts/api/tableau.extensions.1.latest.js"></script>
 
-      dashboard = tableau.extensions.dashboardContent.dashboard;
+</head>
 
-      if (dashboard.worksheets.length > 0) {
-        worksheet = dashboard.worksheets[0];
-        document.getElementById("status").innerText =
-          "✅ Connected to: " + worksheet.name;
-      } else {
-        document.getElementById("status").innerText =
-          "❌ No worksheet found";
-      }
+<body>
 
-    } catch (e) {
-      console.log("Not inside Tableau");
+<h3>Ask your dashboard</h3>
 
-      document.getElementById("status").innerText =
-        "⚠️ Open inside Tableau dashboard";
-    }
-  }
+<input type="text" id="query" placeholder="e.g. west furniture 2022">
+<button onclick="applyFilters()">Apply</button>
 
-  function extractFilters(input) {
-    input = input.toLowerCase();
-
-    let filters = {
-      region: "All",
-      category: "All",
-      segment: "All",
-      year: "All"
-    };
-
-    if (input.includes("west")) filters.region = "West";
-    else if (input.includes("east")) filters.region = "East";
-    else if (input.includes("south")) filters.region = "South";
-    else if (input.includes("central")) filters.region = "Central";
-
-    if (input.includes("furniture")) filters.category = "Furniture";
-    else if (input.includes("office")) filters.category = "Office Supplies";
-    else if (input.includes("technology") || input.includes("tech")) filters.category = "Technology";
-
-    if (input.includes("consumer")) filters.segment = "Consumer";
-    else if (input.includes("corporate")) filters.segment = "Corporate";
-    else if (input.includes("home office")) filters.segment = "Home Office";
-
-    const match = input.match(/\b(20\d{2})\b/);
-    if (match) filters.year = match[1];
-
-    return filters;
-  }
-
-  async function applyFilters() {
-    if (!worksheet) {
-      alert("⚠️ Tableau not connected yet");
-      return;
-    }
-
-    const input = document.getElementById("query").value;
-    const filters = extractFilters(input);
-
-    try {
-      if (filters.region !== "All") {
-        await worksheet.applyFilterAsync("Region", [filters.region], tableau.FilterUpdateType.Replace);
-      }
-
-      if (filters.category !== "All") {
-        await worksheet.applyFilterAsync("Category", [filters.category], tableau.FilterUpdateType.Replace);
-      }
-
-      if (filters.segment !== "All") {
-        await worksheet.applyFilterAsync("Segment", [filters.segment], tableau.FilterUpdateType.Replace);
-      }
-
-      if (filters.year !== "All") {
-        await worksheet.applyFilterAsync("Year", [filters.year], tableau.FilterUpdateType.Replace);
-      }
-
-      alert("✅ Filters Applied!");
-
-    } catch (err) {
-      alert("❌ Error: " + err.message);
-    }
-  }
-
-  window.onload = init;
-</script>
+<p id="status"></p>
