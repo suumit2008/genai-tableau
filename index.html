@@ -1,94 +1,134 @@
-<script>
-  let dashboard, worksheet;
+<!DOCTYPE html>
+<html>
+<head>
+  <title>GenAI Dashboard Control</title>
+</head>
 
-  async function init() {
+<body style="font-family: Arial; padding:10px;">
 
-    // 🔥 Check if running inside Tableau
-    if (typeof tableau === "undefined") {
-      console.log("Running outside Tableau (GitHub preview)");
-      document.body.insertAdjacentHTML("beforeend",
-        "<p style='color:gray'>⚠️ Open inside Tableau to use filters</p>");
-      return;
+  <h3>Ask your dashboard</h3>
+
+  <input type="text" id="query" placeholder="e.g. west furniture 2022" style="width:250px;">
+  <button onclick="applyFilters()">Apply</button>
+
+  <p id="status" style="color:gray;"></p>
+
+  <script>
+    let dashboard, worksheet;
+    let isTableau = false;
+
+    async function loadTableau() {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://public.tableau.com/javascripts/api/tableau.extensions.1.latest.js";
+
+        script.onload = () => {
+          isTableau = true;
+          resolve();
+        };
+
+        script.onerror = () => {
+          console.log("Running outside Tableau");
+          resolve(); // don't fail
+        };
+
+        document.head.appendChild(script);
+      });
     }
 
-    try {
-      await tableau.extensions.initializeAsync();
-      dashboard = tableau.extensions.dashboardContent.dashboard;
+    async function init() {
+      await loadTableau();
 
-      if (dashboard.worksheets.length > 0) {
-        worksheet = dashboard.worksheets[0];
-        console.log("✅ Connected:", worksheet.name);
+      if (!isTableau || typeof tableau === "undefined") {
+        document.getElementById("status").innerText =
+          "⚠️ This works only inside Tableau dashboard";
+        return;
       }
 
-    } catch (e) {
-      console.error("Init error:", e);
-    }
-  }
+      try {
+        await tableau.extensions.initializeAsync();
+        dashboard = tableau.extensions.dashboardContent.dashboard;
 
-  function extractFilters(input) {
-    input = input.toLowerCase();
+        if (dashboard.worksheets.length > 0) {
+          worksheet = dashboard.worksheets[0];
+          document.getElementById("status").innerText =
+            "✅ Connected to: " + worksheet.name;
+        } else {
+          document.getElementById("status").innerText =
+            "❌ No worksheet found";
+        }
 
-    let filters = {
-      region: "All",
-      category: "All",
-      segment: "All",
-      year: "All"
-    };
-
-    if (input.includes("west")) filters.region = "West";
-    else if (input.includes("east")) filters.region = "East";
-    else if (input.includes("south")) filters.region = "South";
-    else if (input.includes("central")) filters.region = "Central";
-
-    if (input.includes("furniture")) filters.category = "Furniture";
-    else if (input.includes("office")) filters.category = "Office Supplies";
-    else if (input.includes("technology") || input.includes("tech")) filters.category = "Technology";
-
-    if (input.includes("consumer")) filters.segment = "Consumer";
-    else if (input.includes("corporate")) filters.segment = "Corporate";
-    else if (input.includes("home office")) filters.segment = "Home Office";
-
-    const match = input.match(/\b(20\d{2})\b/);
-    if (match) filters.year = match[1];
-
-    return filters;
-  }
-
-  async function applyFilters() {
-
-    if (!worksheet) {
-      alert("⚠️ This only works inside Tableau dashboard");
-      return;
+      } catch (e) {
+        console.error(e);
+        document.getElementById("status").innerText =
+          "❌ Error initializing extension";
+      }
     }
 
-    const input = document.getElementById("query").value;
-    const filters = extractFilters(input);
+    function extractFilters(input) {
+      input = input.toLowerCase();
 
-    try {
+      let filters = {
+        region: "All",
+        category: "All",
+        segment: "All",
+        year: "All"
+      };
 
-      if (filters.region !== "All") {
-        await worksheet.applyFilterAsync("Region", [filters.region], tableau.FilterUpdateType.Replace);
-      }
+      if (input.includes("west")) filters.region = "West";
+      else if (input.includes("east")) filters.region = "East";
+      else if (input.includes("south")) filters.region = "South";
+      else if (input.includes("central")) filters.region = "Central";
 
-      if (filters.category !== "All") {
-        await worksheet.applyFilterAsync("Category", [filters.category], tableau.FilterUpdateType.Replace);
-      }
+      if (input.includes("furniture")) filters.category = "Furniture";
+      else if (input.includes("office")) filters.category = "Office Supplies";
+      else if (input.includes("technology") || input.includes("tech")) filters.category = "Technology";
 
-      if (filters.segment !== "All") {
-        await worksheet.applyFilterAsync("Segment", [filters.segment], tableau.FilterUpdateType.Replace);
-      }
+      if (input.includes("consumer")) filters.segment = "Consumer";
+      else if (input.includes("corporate")) filters.segment = "Corporate";
+      else if (input.includes("home office")) filters.segment = "Home Office";
 
-      if (filters.year !== "All") {
-        await worksheet.applyFilterAsync("Year", [filters.year], tableau.FilterUpdateType.Replace);
-      }
+      const match = input.match(/\b(20\d{2})\b/);
+      if (match) filters.year = match[1];
 
-      alert("✅ Filters Applied!");
-
-    } catch (err) {
-      console.error(err);
-      alert("❌ Error: " + err.message);
+      return filters;
     }
-  }
 
-  init();
-</script>
+    async function applyFilters() {
+      if (!worksheet) {
+        alert("⚠️ Open this inside Tableau to use filters");
+        return;
+      }
+
+      const input = document.getElementById("query").value;
+      const filters = extractFilters(input);
+
+      try {
+        if (filters.region !== "All") {
+          await worksheet.applyFilterAsync("Region", [filters.region], tableau.FilterUpdateType.Replace);
+        }
+
+        if (filters.category !== "All") {
+          await worksheet.applyFilterAsync("Category", [filters.category], tableau.FilterUpdateType.Replace);
+        }
+
+        if (filters.segment !== "All") {
+          await worksheet.applyFilterAsync("Segment", [filters.segment], tableau.FilterUpdateType.Replace);
+        }
+
+        if (filters.year !== "All") {
+          await worksheet.applyFilterAsync("Year", [filters.year], tableau.FilterUpdateType.Replace);
+        }
+
+        alert("✅ Filters Applied!");
+
+      } catch (err) {
+        alert("❌ Error: " + err.message);
+      }
+    }
+
+    init();
+  </script>
+
+</body>
+</html>
