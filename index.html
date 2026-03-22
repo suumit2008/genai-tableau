@@ -2,16 +2,22 @@
   let dashboard, worksheet;
 
   async function init() {
+
+    // 🔥 Check if running inside Tableau
+    if (typeof tableau === "undefined") {
+      console.log("Running outside Tableau (GitHub preview)");
+      document.body.insertAdjacentHTML("beforeend",
+        "<p style='color:gray'>⚠️ Open inside Tableau to use filters</p>");
+      return;
+    }
+
     try {
       await tableau.extensions.initializeAsync();
       dashboard = tableau.extensions.dashboardContent.dashboard;
 
-      // ✅ Always pick first worksheet safely
       if (dashboard.worksheets.length > 0) {
         worksheet = dashboard.worksheets[0];
-        console.log("✅ Using worksheet:", worksheet.name);
-      } else {
-        alert("❌ No worksheets found in dashboard");
+        console.log("✅ Connected:", worksheet.name);
       }
 
     } catch (e) {
@@ -51,7 +57,7 @@
   async function applyFilters() {
 
     if (!worksheet) {
-      alert("⚠️ Worksheet not initialized");
+      alert("⚠️ This only works inside Tableau dashboard");
       return;
     }
 
