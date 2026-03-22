@@ -1,114 +1,96 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>GenAI Dashboard Control</title>
-  <script src="https://public.tableau.com/javascripts/api/tableau.extensions.1.latest.js"></script>
-</head>
+<script>
+  let dashboard, worksheet;
 
-<body style="font-family: Arial; padding:10px;">
+  async function init() {
+    try {
+      await tableau.extensions.initializeAsync();
+      dashboard = tableau.extensions.dashboardContent.dashboard;
 
-  <h3>Ask your dashboard</h3>
+      // 🔥 Wait until worksheet is available
+      let attempts = 0;
 
-  <input type="text" id="query" placeholder="e.g. west furniture 2022" style="width:250px;">
-  <button onclick="applyFilters()">Apply</button>
-
-  <script>
-    let dashboard, worksheet;
-
-    // 🔹 Initialize Tableau Extension
-    async function init() {
-      try {
-        await tableau.extensions.initializeAsync();
-        dashboard = tableau.extensions.dashboardContent.dashboard;
-
-        // 🔥 Get worksheet by name (CHANGE if needed)
+      while (!worksheet && attempts < 10) {
         worksheet = dashboard.worksheets.find(ws => ws.name === "Sales");
-
-        if (!worksheet) {
-          alert("❌ Worksheet 'Sales' not found.\nCheck your sheet name.");
-          console.log("Available sheets:", dashboard.worksheets.map(ws => ws.name));
-        } else {
-          console.log("✅ Connected to worksheet:", worksheet.name);
-        }
-
-      } catch (e) {
-        console.error("Init error:", e);
+        await new Promise(r => setTimeout(r, 500)); // wait 0.5 sec
+        attempts++;
       }
-    }
-
-    // 🔹 Extract filters from user text
-    function extractFilters(input) {
-      input = input.toLowerCase();
-
-      let filters = {
-        region: "All",
-        category: "All",
-        segment: "All",
-        year: "All"
-      };
-
-      // REGION
-      if (input.includes("west")) filters.region = "West";
-      else if (input.includes("east")) filters.region = "East";
-      else if (input.includes("south")) filters.region = "South";
-      else if (input.includes("central")) filters.region = "Central";
-
-      // CATEGORY
-      if (input.includes("furniture")) filters.category = "Furniture";
-      else if (input.includes("office")) filters.category = "Office Supplies";
-      else if (input.includes("technology") || input.includes("tech")) filters.category = "Technology";
-
-      // SEGMENT
-      if (input.includes("consumer")) filters.segment = "Consumer";
-      else if (input.includes("corporate")) filters.segment = "Corporate";
-      else if (input.includes("home office")) filters.segment = "Home Office";
-
-      // YEAR
-      const match = input.match(/\b(20\d{2})\b/);
-      if (match) filters.year = match[1];
-
-      return filters;
-    }
-
-    // 🔹 Apply filters to Tableau
-    async function applyFilters() {
 
       if (!worksheet) {
-        alert("⚠️ Worksheet not ready yet. Try again.");
-        return;
+        alert("❌ Worksheet not found. Check sheet name.");
+        console.log("Available sheets:", dashboard.worksheets.map(ws => ws.name));
+      } else {
+        console.log("✅ Worksheet ready:", worksheet.name);
       }
 
-      const input = document.getElementById("query").value;
-      const filters = extractFilters(input);
+    } catch (e) {
+      console.error("Init error:", e);
+    }
+  }
 
-      try {
+  function extractFilters(input) {
+    input = input.toLowerCase();
 
-        if (filters.region !== "All") {
-          await worksheet.applyFilterAsync("Region", [filters.region], tableau.FilterUpdateType.Replace);
-        }
+    let filters = {
+      region: "All",
+      category: "All",
+      segment: "All",
+      year: "All"
+    };
 
-        if (filters.category !== "All") {
-          await worksheet.applyFilterAsync("Category", [filters.category], tableau.FilterUpdateType.Replace);
-        }
+    if (input.includes("west")) filters.region = "West";
+    else if (input.includes("east")) filters.region = "East";
+    else if (input.includes("south")) filters.region = "South";
+    else if (input.includes("central")) filters.region = "Central";
 
-        if (filters.segment !== "All") {
-          await worksheet.applyFilterAsync("Segment", [filters.segment], tableau.FilterUpdateType.Replace);
-        }
+    if (input.includes("furniture")) filters.category = "Furniture";
+    else if (input.includes("office")) filters.category = "Office Supplies";
+    else if (input.includes("technology") || input.includes("tech")) filters.category = "Technology";
 
-        if (filters.year !== "All") {
-          await worksheet.applyFilterAsync("Year", [filters.year], tableau.FilterUpdateType.Replace);
-        }
+    if (input.includes("consumer")) filters.segment = "Consumer";
+    else if (input.includes("corporate")) filters.segment = "Corporate";
+    else if (input.includes("home office")) filters.segment = "Home Office";
 
-        alert("✅ Filters Applied!");
+    const match = input.match(/\b(20\d{2})\b/);
+    if (match) filters.year = match[1];
 
-      } catch (err) {
-        console.error(err);
-        alert("❌ Error applying filters: " + err.message);
-      }
+    return filters;
+  }
+
+  async function applyFilters() {
+
+    if (!worksheet) {
+      alert("⏳ Still loading dashboard, try again in 1 second...");
+      return;
     }
 
-    init();
-  </script>
+    const input = document.getElementById("query").value;
+    const filters = extractFilters(input);
 
-</body>
-</html>
+    try {
+
+      if (filters.region !== "All") {
+        await worksheet.applyFilterAsync("Region", [filters.region], tableau.FilterUpdateType.Replace);
+      }
+
+      if (filters.category !== "All") {
+        await worksheet.applyFilterAsync("Category", [filters.category], tableau.FilterUpdateType.Replace);
+      }
+
+      if (filters.segment !== "All") {
+        await worksheet.applyFilterAsync("Segment", [filters.segment], tableau.FilterUpdateType.Replace);
+      }
+
+      if (filters.year !== "All") {
+        await worksheet.applyFilterAsync("Year", [filters.year], tableau.FilterUpdateType.Replace);
+      }
+
+      alert("✅ Filters Applied!");
+
+    } catch (err) {
+      console.error(err);
+      alert("❌ Error: " + err.message);
+    }
+  }
+
+  init();
+</script>
